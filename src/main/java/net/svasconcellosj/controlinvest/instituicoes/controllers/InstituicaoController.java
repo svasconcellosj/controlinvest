@@ -1,10 +1,7 @@
 package net.svasconcellosj.controlinvest.instituicoes.controllers;
 
-import jakarta.validation.Valid;
-import net.svasconcellosj.controlinvest.instituicoes.Dtos.InstituicaoDto;
 import net.svasconcellosj.controlinvest.instituicoes.model.InstituicaoModel;
 import net.svasconcellosj.controlinvest.instituicoes.services.InstituicaoService;
-import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -15,31 +12,63 @@ import java.util.List;
 import java.util.Optional;
 
 @RestController
-@RequestMapping("/instituicoes")
+@RequestMapping("/api/instituicoes")
 public class InstituicaoController {
 
     @Autowired
     private InstituicaoService instituicaoService;
 
     @GetMapping
-    public ResponseEntity buscaInstituicoes() {
-        List listaInstituicoes = instituicaoService.findAllInstituicoes();
-        return ResponseEntity.status(HttpStatus.OK).body(listaInstituicoes);
+    public ResponseEntity<List<InstituicaoModel>> getAllInstituicoes() {
+        try {
+            List<InstituicaoModel> instituicoes = instituicaoService.findAllInstituicoes();
+            return new ResponseEntity<>(instituicoes, HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<InstituicaoModel> getInstituicaoById(@PathVariable("id") BigInteger id) {
+        try {
+            Optional<InstituicaoModel> instituicao = instituicaoService.findInstituicao(id);
+            return instituicao.map(value -> new ResponseEntity<>(value, HttpStatus.OK))
+                    .orElseGet(() -> new ResponseEntity<>(HttpStatus.NOT_FOUND));
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 
     @PostMapping
-    public ResponseEntity gravaInstituicao(@RequestBody @Valid InstituicaoDto instituicaoDto) {
-        var novaInstituicao = new InstituicaoModel();
-        BeanUtils.copyProperties(instituicaoDto, novaInstituicao);
-        return ResponseEntity.status(HttpStatus.CREATED).body(instituicaoService.saveInstituicao(novaInstituicao));
+    public ResponseEntity<InstituicaoModel> saveInstituicao(@RequestBody InstituicaoModel instituicaoModel) {
+        try {
+            InstituicaoModel savedInstituicao = instituicaoService.saveInstituicao(instituicaoModel);
+            return new ResponseEntity<>(savedInstituicao, HttpStatus.CREATED);
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 
-    @GetMapping(value = "/{id}")
-    public ResponseEntity buscaInstituicao(@PathVariable BigInteger id) {
-        Optional<InstituicaoModel> instituicaoModel = instituicaoService.findInstituicao(id);
-        if (instituicaoModel.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Instituição não encontrada!");
+    @PutMapping("/{id}")
+    public ResponseEntity<InstituicaoModel> updateInstituicao(@PathVariable("id") BigInteger id,
+                                                              @RequestBody InstituicaoModel instituicaoModel) {
+        try {
+            InstituicaoModel updatedInstituicao = instituicaoService.updateInstituicao(id, instituicaoModel);
+            return updatedInstituicao != null ?
+                    new ResponseEntity<>(updatedInstituicao, HttpStatus.OK) :
+                    new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
-        return ResponseEntity.status(HttpStatus.OK).body(instituicaoModel);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<HttpStatus> deleteInstituicao(@PathVariable("id") BigInteger id) {
+        try {
+            instituicaoService.deleteInstituicao(id);
+            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 }
